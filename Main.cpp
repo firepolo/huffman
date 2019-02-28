@@ -49,6 +49,25 @@ public:
 	{
 	}
 
+	void flush()
+	{
+		write(&buf, shift);
+		cursor = 0;
+		shift = 0;
+		out.clear(0);
+		out.seekp(0);
+	}
+
+	void seek(unsigned int pos)
+	{
+		out.seekp(pos);
+	}
+
+	inline unsigned int tell()
+	{
+		return cursor;
+	}
+
 	void bit(bool bit)
 	{
 		buf = (buf << 1) | bit;
@@ -127,14 +146,6 @@ private:
 			else out.write(&code, 7);
 		}
 
-		// Get length (in bits) recursivly of encoded tree
-		// 1bit if there are a node
-		// 9bit if there are a leaf (1bit for type + 8bit for character code)
-		inline int length()
-		{
-			return 1 + (left ? left->length() + right->length() : 8);
-		}
-
 		int score;
 		char code;
 		Node *left;
@@ -167,15 +178,19 @@ public:
 		// Get root of tree
 		Node *root = queue.top();
 
-		// Get total length of encoded tree and write in output stream
-		int length = root->length();
-		out.write((char *)&length, 31);
-		std::cout << "Length writted : " << length << std::endl;
+		// Prepare "2 * uint32" for write length of tree and data
+		// 1 : length of tree
+		// 2 : length of data
+		out.seek(8);
 
 		// Encode tree and write in output stream
+		unsigned int treeLength = out.tell();
 		root->encode(out);
 
-		// Get all code for all leafs
+		unsigned int dataLength = out.tell();
+		treeLength = dataLength - treeLength;
+
+		// Get codes for all leafs
 		std::unordered_map<char, std::vector<bool>> codes;
 		for (auto it = frequences.begin(), end = frequences.end(); it != end; ++it) root->search(it->first, codes[it->first]);
 
@@ -193,15 +208,29 @@ public:
 			for (auto it = code.rbegin(), end = code.rend(); it != end; ++it) out.bit(*it);
 		}
 
+		dataLength = out.tell() - dataLength;
+
+		// Flush output stream for read begin of file
+		out.flush();
+		out.write((char *)&treeLength, 31);
+		out.write((char *)&dataLength, 31);
+
+		std::cout << "Length of tree writted : " << treeLength << std::endl;
+		std::cout << "Length of data writted : " << dataLength << std::endl;
+
 		return 0;
 	}
 
 	int decode(ibstream &in, std::ostream &out)
 	{
 		// Read length of tree
-		unsigned int length;
-		in.read((char *)&length, 32);
-		std::cout << "Length readed : " << length << std::endl;
+		unsigned int treeLength;
+		in.read((char *)&treeLength, 32);
+		std::cout << "Length of tree readed : " << treeLength << std::endl;
+
+		unsigned int dataLength;
+		in.read((char *)&dataLength, 32);
+		std::cout << "Length of data readed : " << dataLength << std::endl;
 
 		Node *root = new Node(0, 0, 0, 0);
 		root->decode(in);
@@ -216,17 +245,15 @@ int main(int argc, char *argv[])
 {
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 
-	const char *path = "C:\\personal\\huffman.txt";
-
 	huffman h;
 
 	std::istringstream iss("this is an example of a huffman tree - fuisofqdiwqp0kdwqjdmnavhiausjefojaefiaueifjPWKDSOADJMOADAUIJWDJAWDGRDG");
-	std::ofstream ofs(path, std::ofstream::binary);
+	std::ofstream ofs(argv[1], std::ofstream::binary);
 	obstream obs(ofs);
 	h.encode(iss, obs);
 	ofs.close();
 
-	std::ifstream ifs(path, std::ifstream::binary);
+	std::ifstream ifs(argv[1], std::ifstream::binary);
 	ibstream ibs(ifs);
 	std::ostringstream oss;
 	h.decode(ibs, oss);
