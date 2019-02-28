@@ -210,7 +210,9 @@ public:
 
 		dataLength = out.tell() - dataLength;
 
-		// Flush output stream for read begin of file
+		// Write to beginning of the file
+		// 4byte : length of tree
+		// 4byte : length of data
 		out.flush();
 		out.write((char *)&treeLength, 31);
 		out.write((char *)&dataLength, 31);
