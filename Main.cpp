@@ -87,6 +87,22 @@ private:
 			delete right;
 		}
 
+		bool search(char search, std::vector<bool> &bits)
+		{
+			if (!left) return code == search;
+			if (left->search(search, bits))
+			{
+				bits.push_back(false);
+				return true;
+			}
+			if (right->search(search, bits))
+			{
+				bits.push_back(true);
+				return true;
+			}
+			return false;
+		}
+
 		void decode(ibstream &in)
 		{
 			if (in.bit())
@@ -159,10 +175,23 @@ public:
 		// Encode tree and write in output stream
 		root->encode(out);
 
-		// Encode all data
+		// Get all code for all leafs
 		std::unordered_map<char, std::vector<bool>> codes;
+		for (auto it = frequences.begin(), end = frequences.end(); it != end; ++it) root->search(it->first, codes[it->first]);
 
+		// Delete tree for not use useless memory
 		delete root;
+
+		// Prepare input stream for read a second time
+		in.clear(0);
+		in.seekg(0);
+
+		// Encode all data with codes of leafs
+		for (char c; in.get(c);)
+		{
+			auto code = codes[c];
+			for (auto it = code.rbegin(), end = code.rend(); it != end; ++it) out.bit(*it);
+		}
 
 		return 0;
 	}
