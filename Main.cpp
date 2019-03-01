@@ -4,7 +4,6 @@
 #include <functional>
 #include <queue>
 #include <unordered_map>
-#include <crtdbg.h>
 
 class ibstream
 {
@@ -304,7 +303,6 @@ private:
 
 int main(int argc, char *argv[])
 {
-	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 	App app;
 	return app.run(argc, argv);
 }
