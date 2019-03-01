@@ -53,7 +53,7 @@ public:
 		write(&buf, 8 - shift);
 		cursor = 0;
 		shift = 0;
-		out.clear(0);
+		out.clear();
 		out.seekp(0);
 	}
 
@@ -210,7 +210,7 @@ public:
 		delete root;
 
 		// Prepare input stream for read a second time
-		in.clear(0);
+		in.clear();
 		in.seekg(0, in.end);
 		unsigned int dataLength = (unsigned int)in.tellg();
 		in.seekg(0);
@@ -256,27 +256,25 @@ public:
 class App
 {
 public:
-	int run(int argc, char *argv[])
+	int run(std::vector<std::string> args)
 	{
-		if (argc < 4) goto Exit;
+		if (args.size() < 3) goto Exit;
 
-		for (int i = 0; i < argc; ++i) std::cout << i << ") " << argv[i] << std::endl;
-
-		ifs.open(argv[2], ifs.binary);
+		ifs.open(args[1], ifs.binary);
 		if (!ifs.is_open()) return exit("First argument will be a source file");
-		ofs.open(argv[3], ofs.binary);
+		ofs.open(args[2], ofs.binary);
 		if (!ofs.is_open()) return exit("First argument will be a destination file");
 
 		huffman h;
 
-		if (strncmp(argv[1], "encode", 6) == 0)
+		if (args[0].compare("encode") == 0)
 		{
 			obstream obs(ofs);
 			h.encode(ifs, obs);
 			return exit("Encoded done");
 		}
 
-		if (strncmp(argv[1], "decode", 6) == 0)
+		if (args[0].compare("decode") == 0)
 		{
 			ibstream ibs(ifs);
 			h.decode(ibs, ofs);
@@ -304,5 +302,5 @@ private:
 int main(int argc, char *argv[])
 {
 	App app;
-	return app.run(argc, argv);
+	return app.run(std::vector<std::string>(argv + 1, argv + argc));
 }
